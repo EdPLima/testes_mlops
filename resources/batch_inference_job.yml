@@ -171,7 +171,6 @@ resources:
           depends_on:
             - task_key: "run_inference"
           
-          job_cluster_key: "main_cluster"
           python_wheel_task:
             package_name: "teste_mlops"
             entry_point: "batch_inference_save"

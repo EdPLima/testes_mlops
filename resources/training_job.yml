@@ -43,7 +43,6 @@ resources:
           depends_on:
             - task_key: "process_data"
           python_wheel_task:
-          job_cluster_key: "main_cluster"
             package_name: "teste_mlops"
             entry_point: "train_model"
             parameters:
