@@ -19,7 +19,7 @@
 
 bundle:
   name: iris-classification
-  # Force rebuild: all jobs have cluster config
+  # Force rebuild: pyproject.toml updated (no readme requirement)
 
 # ==============================================================================
 # INCLUDE: Importa definições de recursos
@@ -60,7 +60,7 @@ include:
 artifacts:
   default:
     type: whl
-    build: pip install build && python -m build
+    build: uv build
     path: .
 
 # ==============================================================================
