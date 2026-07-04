@@ -33,7 +33,7 @@
 # COMMAND ----------
 
 # DBTITLE 1,Carregar Dataset
-
+ # chamado dataset
 iris = load_iris()
 df = pd.DataFrame(data=iris.data, columns=iris.feature_names)
 df['target'] = iris.target
