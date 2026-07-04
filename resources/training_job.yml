@@ -1,3 +1,4 @@
+# VERIFIED: All tasks have job_cluster_key configured
 resources:
   jobs:
     mlops_training_pipeline:
