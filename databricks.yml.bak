@@ -60,7 +60,7 @@ include:
 artifacts:
   default:
     type: whl
-    build: pip install build && python -m build
+    build: uv build
     path: .
 
 # ==============================================================================
