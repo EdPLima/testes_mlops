@@ -6,7 +6,6 @@ build-backend = "hatchling.build"
 name = "teste-mlops"
 version = "0.1.0"
 description = "Pipeline MLOps para classificação Iris com CI/CD, retreino automático e monitoramento"
-readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 
