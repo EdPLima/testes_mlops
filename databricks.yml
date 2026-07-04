@@ -19,6 +19,7 @@
 
 bundle:
   name: iris-classification
+  # Force rebuild: all jobs have cluster config
 
 # ==============================================================================
 # INCLUDE: Importa definições de recursos
