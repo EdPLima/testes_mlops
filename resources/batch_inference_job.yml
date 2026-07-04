@@ -210,9 +210,9 @@ resources:
       
       email_notifications:
         on_failure:
-          - "${workspace.current_user.email}"
+          - "eduardolimaofficial410@gmail.com"
         on_success:
-          - "${workspace.current_user.email}"  # Apenas em prod
+          - "eduardolimaofficial410@gmail.com"  # Apenas em prod
       
       # ==========================================================================
       # TAGS (Para organização e billing)
