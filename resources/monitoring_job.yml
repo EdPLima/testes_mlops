@@ -1,0 +1,35 @@
+resources:
+  jobs:
+    mlops_monitoring_pipeline:
+      name: "MLOps Model Monitoring Pipeline"
+      description: "Monitora drift do modelo em produção"
+      
+      schedule:
+        quartz_cron_expression: "0 0 */6 * * ?"  # A cada 6 horas
+        timezone_id: "America/Sao_Paulo"
+        pause_status: "UNPAUSED"
+      
+      tasks:
+        - task_key: "monitor_drift"
+          description: "Monitora drift do modelo Champion"
+          python_wheel_task:
+            package_name: "teste_mlops"
+            entry_point: "monitor_drift"
+            parameters:
+              - "--catalog"
+              - "{{job.parameters.catalog}}"
+              - "--schema"
+              - "{{job.parameters.schema}}"
+          libraries:
+            - pypi:
+                package: "mlflow"
+      
+      parameters:
+        - name: "catalog"
+          default: "study"
+        - name: "schema"
+          default: "mlops_iris"
+      
+      email_notifications:
+        on_failure:
+          - "{{workspace.current_user.email}}"

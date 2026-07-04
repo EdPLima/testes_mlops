@@ -1,0 +1,236 @@
+# ==============================================================================
+# Databricks Asset Bundle (DAB) - Configuração Principal
+# ==============================================================================
+#
+# PROPÓSITO:
+#   Define como deployar e gerenciar recursos do Databricks via Infrastructure as Code.
+#   Permite deploy consistente e repetível em diferentes ambientes.
+#
+# ESTRUTURA:
+#   1. Informações básicas do bundle
+#   2. Importação de recursos (Jobs, Pipelines, etc)
+#   3. Empacotamento de código Python
+#   4. Variáveis globais
+#   5. Configuração por ambiente (dev, staging, prod)
+#
+# LEIA: BUNDLE_GUIDE.md para entender cada seção em detalhes.
+#
+# ==============================================================================
+
+bundle:
+  name: iris-classification
+
+# ==============================================================================
+# INCLUDE: Importa definições de recursos
+# ==============================================================================
+# 
+# O que faz:
+#   - Lê todos os arquivos .yml da pasta resources/
+#   - Cada arquivo define Jobs, Pipelines, ou outros recursos
+#
+# Benefícios:
+#   - Organização: um arquivo por job
+#   - Manutenção: mais fácil encontrar e editar
+#   - Colaboração: menos conflitos no Git
+#
+
+include:
+  - resources/*.yml
+
+# ==============================================================================
+# ARTIFACTS: Empacotamento de Código
+# ==============================================================================
+#
+# O que faz:
+#   - Empacota todo código Python em um wheel (.whl)
+#   - Wheel é instalado automaticamente nos jobs
+#
+# Por que wheel?
+#   - Inclui dependências
+#   - Versionamento correto
+#   - Instalação rápida
+#   - Padrão Python
+#
+# Comando: uv build
+#   - uv é um gerenciador de pacotes Python rápido
+#   - Alternativa: pip install build && python -m build
+#
+
+artifacts:
+  default:
+    type: whl
+    build: uv build
+    path: .
+
+# ==============================================================================
+# VARIÁVEIS: Parâmetros Globais
+# ==============================================================================
+#
+# Como usar:
+#   - Em resources/*.yml, referencie com ${var.nome_variavel}
+#   - Cada target pode sobrescrever valores
+#
+# Exemplo:
+#   parameters:
+#     - "--catalog"
+#     - "${var.catalog_name}"  # Muda por ambiente
+#
+
+variables:
+  # Rastreamento de versão
+  git_sha:
+    description: "SHA do commit Git para rastreamento de versão"
+    default: "local"
+  
+  branch:
+    description: "Branch do Git"
+    default: "main"
+  
+  # Controle de agendamento
+  schedule_pause_status:
+    description: "Status de pausa do agendamento (PAUSED ou UNPAUSED)"
+    default: "PAUSED"
+  
+  # Unity Catalog
+  catalog_name:
+    description: "Nome do catálogo Unity Catalog"
+    default: "study"
+  
+  schema_name:
+    description: "Nome do schema Unity Catalog"
+    default: "mlops_iris"
+  
+  # Modelo MLflow
+  model_name:
+    description: "Nome do modelo no MLflow Registry"
+    default: "logistic_regression_iris"
+
+# ==============================================================================
+# TARGETS: Ambientes de Deploy
+# ==============================================================================
+#
+# Define três ambientes separados:
+#   - dev: Desenvolvimento local
+#   - staging: Testes pré-produção
+#   - prod: Produção real
+#
+# Cada ambiente tem:
+#   - Workspace path diferente
+#   - Catálogo separado
+#   - Jobs pausados/não pausados
+#
+# ==============================================================================
+
+targets:
+  # ============================================================================
+  # DEV: Ambiente de Desenvolvimento
+  # ============================================================================
+  #
+  # CARACTERÍSTICAS:
+  #   - Cada desenvolvedor tem sua própria pasta
+  #   - Catálogo isolado por usuário (eduardo_dev, maria_dev)
+  #   - Jobs pausados (não rodam automaticamente)
+  #   - Modo development (validações menos rigorosas)
+  #
+  # QUANDO USAR:
+  #   - Testar mudanças localmente
+  #   - Experimentar novas features
+  #   - Debug de jobs
+  #
+  # DEPLOY:
+  #   databricks bundle deploy --target dev
+  #
+  dev:
+    default: true  # Ambiente padrão se não especificar --target
+    mode: development
+    
+    workspace:
+      host: https://dbc-6181e49f-87e5.cloud.databricks.com
+      # Cada dev tem sua própria pasta:
+      # /Workspace/Users/eduardo@example.com/.bundle/dev/iris-classification/
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.target}/${bundle.name}
+    
+    variables:
+      schedule_pause_status: PAUSED  # Jobs NÃO rodam automaticamente
+      catalog_name: study  # Catálogo de desenvolvimento
+      schema_name: mlops_iris
+  
+  # ============================================================================
+  # STAGING: Ambiente de Homologação
+  # ============================================================================
+  #
+  # CARACTERÍSTICAS:
+  #   - Pasta compartilhada em /Shared
+  #   - Catálogo staging dedicado
+  #   - Jobs pausados (disparo manual)
+  #   - Prefixo stg_ em todos os recursos
+  #
+  # QUANDO USAR:
+  #   - Testar antes de ir pra produção
+  #   - Validar com dados realistas
+  #   - Demos para stakeholders
+  #
+  # DEPLOY:
+  #   databricks bundle deploy --target staging
+  #
+  staging:
+    presets:
+      name_prefix: 'stg_'  # Jobs aparecem como: stg_mlops_training_pipeline
+    
+    workspace:
+      host: https://dbc-6181e49f-87e5.cloud.databricks.com
+      root_path: /Shared/.bundle/${bundle.target}/${bundle.name}
+    
+    variables:
+      schedule_pause_status: PAUSED
+      catalog_name: staging
+      schema_name: mlops_iris
+  
+  # ============================================================================
+  # PROD: Ambiente de Produção
+  # ============================================================================
+  #
+  # CARACTERÍSTICAS:
+  #   - Modo production (validações rigorosas)
+  #   - Pasta compartilhada em /Shared
+  #   - Catálogo prod dedicado
+  #   - Jobs DESPAUSED (rodam automaticamente)
+  #
+  # QUANDO USAR:
+  #   - Ambiente de produção real
+  #   - Dados reais
+  #   - Inferências para usuários
+  #
+  # DEPLOY:
+  #   databricks bundle deploy --target prod
+  #
+  # ATENÇÃO:
+  #   - Sempre teste em dev e staging antes!
+  #   - Deploy em prod deve ser via CI/CD (GitHub Actions)
+  #   - Não faça deploy manual em prod
+  #
+  prod:
+    mode: production  # Validações rigorosas do Databricks
+    
+    workspace:
+      host: https://dbc-6181e49f-87e5.cloud.databricks.com
+      root_path: /Shared/.bundle/${bundle.target}/${bundle.name}
+    
+    variables:
+      schedule_pause_status: UNPAUSED  # Jobs RODAM automaticamente
+      catalog_name: prod
+      schema_name: mlops_iris
+
+# ==============================================================================
+# PRÓXIMOS PASSOS
+# ==============================================================================
+#
+# 1. Leia BUNDLE_GUIDE.md para entender este arquivo em detalhes
+# 2. Explore resources/*.yml para ver definições de Jobs
+# 3. Teste em dev:
+#      databricks bundle validate
+#      databricks bundle deploy --target dev
+# 4. Rode job manualmente:
+#      databricks bundle run mlops_training_pipeline --target dev
+#
+# ==============================================================================

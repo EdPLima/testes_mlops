@@ -1,0 +1,50 @@
+resources:
+  jobs:
+    mlops_evaluation_pipeline:
+      name: "MLOps Model Evaluation Pipeline"
+      description: "Teste A/B entre Challenger e Champion"
+      
+      tasks:
+        - task_key: "evaluate_model"
+          description: "Compara Challenger vs Champion"
+          python_wheel_task:
+            package_name: "teste_mlops"
+            entry_point: "evaluate_model"
+            parameters:
+              - "--catalog"
+              - "{{job.parameters.catalog}}"
+              - "--schema"
+              - "{{job.parameters.schema}}"
+          libraries:
+            - pypi:
+                package: "scikit-learn"
+            - pypi:
+                package: "mlflow"
+        
+        - task_key: "promote_if_better"
+          description: "Promove Challenger para Champion se melhor"
+          depends_on:
+            - task_key: "evaluate_model"
+          python_wheel_task:
+            package_name: "teste_mlops"
+            entry_point: "promote_model"
+            parameters:
+              - "--catalog"
+              - "{{job.parameters.catalog}}"
+              - "--schema"
+              - "{{job.parameters.schema}}"
+          libraries:
+            - pypi:
+                package: "mlflow"
+      
+      parameters:
+        - name: "catalog"
+          default: "study"
+        - name: "schema"
+          default: "mlops_iris"
+      
+      email_notifications:
+        on_success:
+          - "{{workspace.current_user.email}}"
+        on_failure:
+          - "{{workspace.current_user.email}}"

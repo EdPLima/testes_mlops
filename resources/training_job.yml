@@ -1,0 +1,57 @@
+resources:
+  jobs:
+    mlops_training_pipeline:
+      name: "MLOps Training Pipeline"
+      description: "Pipeline completo de retreino: treina modelo e registra como Challenger"
+      
+      schedule:
+        quartz_cron_expression: "0 0 2 * * ?"  # Diariamente às 2AM
+        timezone_id: "America/Sao_Paulo"
+        pause_status: "UNPAUSED"
+      
+      tasks:
+        - task_key: "process_data"
+          description: "Processa e valida dados de entrada"
+          python_wheel_task:
+            package_name: "teste_mlops"
+            entry_point: "process_data"
+            parameters:
+              - "--catalog"
+              - "{{job.parameters.catalog}}"
+              - "--schema"
+              - "{{job.parameters.schema}}"
+          libraries:
+            - pypi:
+                package: "scikit-learn"
+            - pypi:
+                package: "mlflow"
+        
+        - task_key: "train_model"
+          description: "Treina novo modelo e registra como Challenger"
+          depends_on:
+            - task_key: "process_data"
+          python_wheel_task:
+            package_name: "teste_mlops"
+            entry_point: "train_model"
+            parameters:
+              - "--catalog"
+              - "{{job.parameters.catalog}}"
+              - "--schema"
+              - "{{job.parameters.schema}}"
+              - "--max-iter"
+              - "200"
+          libraries:
+            - pypi:
+                package: "scikit-learn"
+            - pypi:
+                package: "mlflow"
+      
+      parameters:
+        - name: "catalog"
+          default: "study"
+        - name: "schema"
+          default: "mlops_iris"
+      
+      email_notifications:
+        on_failure:
+          - "{{workspace.current_user.email}}"
