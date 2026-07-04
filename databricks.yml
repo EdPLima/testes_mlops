@@ -141,7 +141,6 @@ targets:
   #   databricks bundle deploy --target dev
   #
   dev:
-    default: true  # Ambiente padrão se não especificar --target
     mode: development
     
     workspace:
