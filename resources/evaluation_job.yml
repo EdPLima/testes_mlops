@@ -4,9 +4,20 @@ resources:
       name: "MLOps Model Evaluation Pipeline"
       description: "Teste A/B entre Challenger e Champion"
       
+      
+      job_clusters:
+        - job_cluster_key: "main_cluster"
+          new_cluster:
+            spark_version: "14.3.x-scala2.12"
+            node_type_id: "i3.xlarge"
+            num_workers: 2
+            spark_conf:
+              "spark.databricks.delta.preview.enabled": "true"
+
       tasks:
         - task_key: "evaluate_model"
           description: "Compara Challenger vs Champion"
+          job_cluster_key: "main_cluster"
           python_wheel_task:
             package_name: "teste_mlops"
             entry_point: "evaluate_model"
@@ -23,9 +34,11 @@ resources:
         
         - task_key: "promote_if_better"
           description: "Promove Challenger para Champion se melhor"
+          job_cluster_key: "main_cluster"
           depends_on:
             - task_key: "evaluate_model"
           python_wheel_task:
+          job_cluster_key: "main_cluster"
             package_name: "teste_mlops"
             entry_point: "promote_model"
             parameters:

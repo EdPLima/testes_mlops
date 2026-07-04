@@ -54,6 +54,16 @@ resources:
       # TASKS (ETAPAS DO PIPELINE)
       # ==========================================================================
       
+      
+      job_clusters:
+        - job_cluster_key: "main_cluster"
+          new_cluster:
+            spark_version: "14.3.x-scala2.12"
+            node_type_id: "i3.xlarge"
+            num_workers: 2
+            spark_conf:
+              "spark.databricks.delta.preview.enabled": "true"
+
       tasks:
         # ======================================================================
         # TASK 1: CARREGAR NOVOS DADOS
@@ -65,6 +75,7 @@ resources:
         # 
         - task_key: "load_new_data"
           description: "Carrega e valida dados de dataset_drift"
+          job_cluster_key: "main_cluster"
           
           python_wheel_task:
             package_name: "teste_mlops"
@@ -92,10 +103,12 @@ resources:
         # 
         - task_key: "preprocess"
           description: "Normaliza features usando StandardScaler"
+          job_cluster_key: "main_cluster"
           
           depends_on:
             - task_key: "load_new_data"
           
+          job_cluster_key: "main_cluster"
           python_wheel_task:
             package_name: "teste_mlops"
             entry_point: "batch_inference_preprocess"
@@ -122,10 +135,12 @@ resources:
         # 
         - task_key: "run_inference"
           description: "Carrega modelo production e executa inferência"
+          job_cluster_key: "main_cluster"
           
           depends_on:
             - task_key: "preprocess"
           
+          job_cluster_key: "main_cluster"
           python_wheel_task:
             package_name: "teste_mlops"
             entry_point: "batch_inference_predict"
@@ -151,10 +166,12 @@ resources:
         # 
         - task_key: "save_predictions"
           description: "Salva predições em batch_predictions"
+          job_cluster_key: "main_cluster"
           
           depends_on:
             - task_key: "run_inference"
           
+          job_cluster_key: "main_cluster"
           python_wheel_task:
             package_name: "teste_mlops"
             entry_point: "batch_inference_save"
@@ -180,10 +197,12 @@ resources:
         # 
         - task_key: "save_metadata"
           description: "Registra metadados e estatísticas do batch"
+          job_cluster_key: "main_cluster"
           
           depends_on:
             - task_key: "save_predictions"
           
+          job_cluster_key: "main_cluster"
           python_wheel_task:
             package_name: "teste_mlops"
             entry_point: "batch_inference_metadata"
