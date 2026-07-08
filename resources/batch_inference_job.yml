@@ -1,8 +1,8 @@
-# VERIFIED: All tasks have job_cluster_key configured
+# VERIFIED: Configured for serverless compute
 # ==============================================================================
 # Job: Batch Inference Pipeline
 # ==============================================================================
-# 
+#
 # PROPÓSITO:
 #   Executa inferência em lote usando o modelo em produção.
 #   Processa novos dados da tabela dataset_drift e salva predições.
@@ -23,6 +23,10 @@
 #   - Tabela study.mlops_iris.dataset_drift deve estar populada
 #   - Modelo production deve existir no MLflow Registry
 #
+# COMPUTE:
+#   - Este workspace só permite serverless. Não usar job_clusters /
+#     existing_cluster_id / new_cluster nas tasks.
+#
 # ==============================================================================
 
 resources:
@@ -32,52 +36,50 @@ resources:
       description: |
         Executa inferência em lote usando modelo production.
         Processa dados de dataset_drift e salva predições em batch_predictions.
-      
+
       # ==========================================================================
       # AGENDAMENTO
       # ==========================================================================
-      # Em produção, roda automaticamente.
-      # Em dev/staging, precisa ser disparado manualmente.
-      
       schedule:
         quartz_cron_expression: "0 30 3 * * ?"  # Diariamente às 3:30 AM
         timezone_id: "America/Sao_Paulo"
         pause_status: "${var.schedule_pause_status}"
-      
+
       # ==========================================================================
       # CONFIGURAÇÕES GLOBAIS DO JOB
       # ==========================================================================
-      
       max_concurrent_runs: 1  # Apenas 1 execução por vez
       timeout_seconds: 3600   # Timeout de 1 hora
-      
+
+      # ==========================================================================
+      # ENVIRONMENTS (Serverless)
+      # ==========================================================================
+      # Substitui os "libraries:" de cluster clássico.
+      # O wheel do bundle (teste_mlops) precisa estar aqui como dependência,
+      # senão o python_wheel_task não encontra o pacote.
+      #
+      environments:
+        - environment_key: "default"
+          spec:
+            client: "1"
+            dependencies:
+              - "dist/*.whl"
+              - "pandas>=2.0.0"
+              - "scikit-learn>=1.3.0"
+              - "mlflow>=2.9.0"
+
       # ==========================================================================
       # TASKS (ETAPAS DO PIPELINE)
       # ==========================================================================
-      
-      
-      job_clusters:
-        - job_cluster_key: "main_cluster"
-          new_cluster:
-            spark_version: "14.3.x-scala2.12"
-            node_type_id: "i3.xlarge"
-            num_workers: 2
-            spark_conf:
-              "spark.databricks.delta.preview.enabled": "true"
 
       tasks:
         # ======================================================================
         # TASK 1: CARREGAR NOVOS DADOS
         # ======================================================================
-        # Carrega dados da tabela dataset_drift e valida features obrigatórias.
-        # 
-        # ENTRADA: study.mlops_iris.dataset_drift
-        # SAÍDA: CSV temporário com dados validados
-        # 
         - task_key: "load_new_data"
           description: "Carrega e valida dados de dataset_drift"
-          job_cluster_key: "main_cluster"
-          
+          environment_key: "default"
+
           python_wheel_task:
             package_name: "teste_mlops"
             entry_point: "batch_inference_load_data"
@@ -86,30 +88,17 @@ resources:
               - "${var.catalog_name}"
               - "--schema"
               - "${var.schema_name}"
-          
-          libraries:
-            - pypi:
-                package: "pandas>=2.0.0"
-            - pypi:
-                package: "scikit-learn>=1.3.0"
-        
+
         # ======================================================================
         # TASK 2: PRÉ-PROCESSAR DADOS
         # ======================================================================
-        # Aplica StandardScaler nas features.
-        # IMPORTANTE: Usa mesmas estatísticas (mean/std) do treino.
-        # 
-        # ENTRADA: CSV da task anterior
-        # SAÍDA: Features normalizadas + dados originais
-        # 
         - task_key: "preprocess"
           description: "Normaliza features usando StandardScaler"
-          job_cluster_key: "main_cluster"
-          
+          environment_key: "default"
+
           depends_on:
             - task_key: "load_new_data"
-          
-          job_cluster_key: "main_cluster"
+
           python_wheel_task:
             package_name: "teste_mlops"
             entry_point: "batch_inference_preprocess"
@@ -118,30 +107,17 @@ resources:
               - "${var.catalog_name}"
               - "--schema"
               - "${var.schema_name}"
-          
-          libraries:
-            - pypi:
-                package: "pandas>=2.0.0"
-            - pypi:
-                package: "scikit-learn>=1.3.0"
-        
+
         # ======================================================================
         # TASK 3: EXECUTAR INFERÊNCIA
         # ======================================================================
-        # Carrega modelo production do MLflow Registry e faz predições.
-        # 
-        # MODELO: study.mlops_iris.logistic_regression_iris@production
-        # ENTRADA: Features normalizadas
-        # SAÍDA: Predições + probabilidades
-        # 
         - task_key: "run_inference"
           description: "Carrega modelo production e executa inferência"
-          job_cluster_key: "main_cluster"
-          
+          environment_key: "default"
+
           depends_on:
             - task_key: "preprocess"
-          
-          job_cluster_key: "main_cluster"
+
           python_wheel_task:
             package_name: "teste_mlops"
             entry_point: "batch_inference_predict"
@@ -150,28 +126,17 @@ resources:
               - "${var.catalog_name}"
               - "--schema"
               - "${var.schema_name}"
-          
-          libraries:
-            - pypi:
-                package: "mlflow>=2.9.0"
-            - pypi:
-                package: "scikit-learn>=1.3.0"
-        
+
         # ======================================================================
         # TASK 4: SALVAR PREDIÇÕES
         # ======================================================================
-        # Salva predições + features originais na tabela batch_predictions.
-        # 
-        # MODO: APPEND (histórico completo de predições)
-        # PARTICIONAMENTO: Por data_carga
-        # 
         - task_key: "save_predictions"
           description: "Salva predições em batch_predictions"
-          job_cluster_key: "main_cluster"
-          
+          environment_key: "default"
+
           depends_on:
             - task_key: "run_inference"
-          
+
           python_wheel_task:
             package_name: "teste_mlops"
             entry_point: "batch_inference_save"
@@ -180,63 +145,42 @@ resources:
               - "${var.catalog_name}"
               - "--schema"
               - "${var.schema_name}"
-          
-          libraries:
-            - pypi:
-                package: "pandas>=2.0.0"
-        
+
         # ======================================================================
         # TASK 5: SALVAR METADADOS
         # ======================================================================
-        # Registra estatísticas do batch para monitoramento.
-        # 
-        # MÉTRICAS:
-        #   - Distribuição de classes preditas
-        #   - Confiança média/min/max
-        #   - Percentual de predições incertas (<70%)
-        # 
         - task_key: "save_metadata"
           description: "Registra metadados e estatísticas do batch"
-          job_cluster_key: "main_cluster"
-          
+          environment_key: "default"
+
           depends_on:
             - task_key: "save_predictions"
-          
-          job_cluster_key: "main_cluster"
+
           python_wheel_task:
             package_name: "teste_mlops"
             entry_point: "batch_inference_metadata"
-          
-          libraries:
-            - pypi:
-                package: "pandas>=2.0.0"
-      
+
       # ==========================================================================
       # PARÂMETROS DO JOB
       # ==========================================================================
-      # Valores podem ser sobrescritos no momento da execução.
-      
       parameters:
         - name: "catalog"
           default: "${var.catalog_name}"
         - name: "schema"
           default: "${var.schema_name}"
-      
+
       # ==========================================================================
       # NOTIFICAÇÕES
       # ==========================================================================
-      # Envia email em caso de falha.
-      
       email_notifications:
         on_failure:
           - "eduardolimaofficial410@gmail.com"
         on_success:
           - "eduardolimaofficial410@gmail.com"  # Apenas em prod
-      
+
       # ==========================================================================
-      # TAGS (Para organização e billing)
+      # TAGS
       # ==========================================================================
-      
       tags:
         project: "iris-mlops"
         pipeline: "batch-inference"

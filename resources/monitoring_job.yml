@@ -1,29 +1,27 @@
-# VERIFIED: All tasks have job_cluster_key configured
+# VERIFIED: Configured for serverless compute
 resources:
   jobs:
     mlops_monitoring_pipeline:
       name: "MLOps Model Monitoring Pipeline"
       description: "Monitora drift do modelo em produção"
-      
+
       schedule:
         quartz_cron_expression: "0 0 */6 * * ?"  # A cada 6 horas
         timezone_id: "America/Sao_Paulo"
         pause_status: "UNPAUSED"
-      
-      
-      job_clusters:
-        - job_cluster_key: "main_cluster"
-          new_cluster:
-            spark_version: "14.3.x-scala2.12"
-            node_type_id: "i3.xlarge"
-            num_workers: 2
-            spark_conf:
-              "spark.databricks.delta.preview.enabled": "true"
+
+      environments:
+        - environment_key: "default"
+          spec:
+            client: "1"
+            dependencies:
+              - "dist/*.whl"
+              - "mlflow"
 
       tasks:
         - task_key: "monitor_drift"
           description: "Monitora drift do modelo Champion"
-          job_cluster_key: "main_cluster"
+          environment_key: "default"
           python_wheel_task:
             package_name: "teste_mlops"
             entry_point: "monitor_drift"
@@ -32,16 +30,13 @@ resources:
               - "{{job.parameters.catalog}}"
               - "--schema"
               - "{{job.parameters.schema}}"
-          libraries:
-            - pypi:
-                package: "mlflow"
-      
+
       parameters:
         - name: "catalog"
           default: "study"
         - name: "schema"
           default: "mlops_iris"
-      
+
       email_notifications:
         on_failure:
           - "eduardolimaofficial410@gmail.com"
