@@ -10,7 +10,7 @@ resources:
           spec:
             client: "1"
             dependencies:
-              - "dist/*.whl"
+              - "../dist/*.whl"
               - "scikit-learn"
               - "mlflow"
 

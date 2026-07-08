@@ -1,29 +1,28 @@
-# VERIFIED: All tasks have job_cluster_key configured
+# VERIFIED: Configured for serverless compute
 resources:
   jobs:
     mlops_training_pipeline:
       name: "MLOps Training Pipeline"
       description: "Pipeline completo de retreino: treina modelo e registra como Challenger"
-      
+
       schedule:
         quartz_cron_expression: "0 0 2 * * ?"  # Diariamente às 2AM
         timezone_id: "America/Sao_Paulo"
         pause_status: "UNPAUSED"
-      
-      
-      job_clusters:
-        - job_cluster_key: "main_cluster"
-          new_cluster:
-            spark_version: "14.3.x-scala2.12"
-            node_type_id: "i3.xlarge"
-            num_workers: 2
-            spark_conf:
-              "spark.databricks.delta.preview.enabled": "true"
+
+      environments:
+        - environment_key: "default"
+          spec:
+            client: "1"
+            dependencies:
+              - "../dist/*.whl"
+              - "scikit-learn"
+              - "mlflow"
 
       tasks:
         - task_key: "process_data"
           description: "Processa e valida dados de entrada"
-          job_cluster_key: "main_cluster"
+          environment_key: "default"
           python_wheel_task:
             package_name: "teste_mlops"
             entry_point: "process_data"
@@ -32,15 +31,10 @@ resources:
               - "{{job.parameters.catalog}}"
               - "--schema"
               - "{{job.parameters.schema}}"
-          libraries:
-            - pypi:
-                package: "scikit-learn"
-            - pypi:
-                package: "mlflow"
-        
+
         - task_key: "train_model"
           description: "Treina novo modelo e registra como Challenger"
-          job_cluster_key: "main_cluster"
+          environment_key: "default"
           depends_on:
             - task_key: "process_data"
           python_wheel_task:
@@ -53,18 +47,13 @@ resources:
               - "{{job.parameters.schema}}"
               - "--max-iter"
               - "200"
-          libraries:
-            - pypi:
-                package: "scikit-learn"
-            - pypi:
-                package: "mlflow"
-      
+
       parameters:
         - name: "catalog"
           default: "study"
         - name: "schema"
           default: "mlops_iris"
-      
+
       email_notifications:
         on_failure:
           - "eduardolimaofficial410@gmail.com"
