@@ -248,19 +248,20 @@ def main(catalog: str, schema: str, test_size: float) -> None:
 # =============================================================================
 # CLI ENTRY POINT
 # =============================================================================
-# Por que if __name__ == "__main__"?
-# - Este bloco só roda quando você executa o script diretamente
-# - Se importar este arquivo em outro lugar, ele NÃO executa automaticamente
-# - Isso é essencial para testes e reuso de código
 
-if __name__ == "__main__":
-    # argparse: biblioteca padrão Python para CLI
-    # Permite passar argumentos: python script.py --catalog prod
+def cli_main() -> None:
+    """
+    Entry point para execução via linha de comando ou Python wheel.
+    
+    Esta função processa argumentos CLI com argparse e chama main().
+    É usada quando o script é executado via:
+    - python 01_process_data.py --catalog study --schema mlops_iris
+    - Databricks Jobs via python_wheel_task
+    """
     parser = argparse.ArgumentParser(
         description="Process Iris dataset and save to Unity Catalog"
     )
     
-    # Definir argumentos com valores padrão
     parser.add_argument(
         "--catalog",
         type=str,
@@ -282,12 +283,15 @@ if __name__ == "__main__":
         help="Test set proportion (0.0 to 1.0, default: 0.2)"
     )
     
-    # Parsear argumentos
     args = parser.parse_args()
     
-    # Executar pipeline
+    # Chamar função main com argumentos processados
     main(
         catalog=args.catalog,
         schema=args.schema,
         test_size=args.test_size
     )
+
+
+if __name__ == "__main__":
+    cli_main()
