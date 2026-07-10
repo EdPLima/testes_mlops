@@ -60,10 +60,16 @@ resources:
       #
       environments:
         - environment_key: "default"
+<<<<<<< Updated upstream
           python:
             version: "3.10"
           pip:
             requirements:
+=======
+          spec:
+            environment_version: "4"
+            dependencies:
+>>>>>>> Stashed changes
               - "../dist/*.whl"
               - "pandas>=2.0.0"
               - "scikit-learn>=1.3.0"
