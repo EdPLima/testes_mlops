@@ -13,6 +13,7 @@ resources:
       environments:
         - environment_key: "default"
           spec:
+            python_version: "3.10"
             dependencies:
               - "../dist/*.whl"
               - "mlflow"
