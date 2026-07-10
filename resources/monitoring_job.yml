@@ -12,16 +12,9 @@ resources:
 
       environments:
         - environment_key: "default"
-<<<<<<< Updated upstream
-          python:
-            version: "3.10"
-          pip:
-            requirements:
-=======
           spec:
             environment_version: "4"
             dependencies:
->>>>>>> Stashed changes
               - "../dist/*.whl"
               - "mlflow"
 

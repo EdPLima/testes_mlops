@@ -54,10 +54,6 @@ resources:
       # ==========================================================================
       # ENVIRONMENTS (Serverless)
       # ==========================================================================
-      # Substitui os "libraries:" de cluster clássico.
-      # O wheel do bundle (teste_mlops) precisa estar aqui como dependência,
-      # senão o python_wheel_task não encontra o pacote.
-      #
       environments:
         - environment_key: "default"
           spec:
@@ -176,7 +172,7 @@ resources:
         on_failure:
           - "eduardolimaofficial410@gmail.com"
         on_success:
-          - "eduardolimaofficial410@gmail.com"  # Apenas em prod
+          - "eduardolimaofficial410@gmail.com"
 
       # ==========================================================================
       # TAGS
