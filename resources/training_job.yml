@@ -12,9 +12,10 @@ resources:
 
       environments:
         - environment_key: "default"
-          spec:
-            python_version: "3.10"
-            dependencies:
+          python:
+            version: "3.10"
+          pip:
+            requirements:
               - "../dist/*.whl"
               - "scikit-learn"
               - "mlflow"
