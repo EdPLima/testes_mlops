@@ -31,10 +31,10 @@ dev = [
 [project.scripts]
 # Pipeline de Treino
 process_data = "src.pipeline.01_process_data:cli_main"
-train_model = "src.pipeline.02_train_model:main"
-evaluate_model = "src.pipeline.03_evaluate_model:main"
-promote_model = "src.pipeline.04_promote_model:main"
-monitor_drift = "src.pipeline.05_monitor_drift:main"
+train_model = "src.pipeline.02_train_model:cli_main"
+evaluate_model = "src.pipeline.03_evaluate_model:cli_main"
+promote_model = "src.pipeline.04_promote_model:cli_main"
+monitor_drift = "src.pipeline.05_monitor_drift:cli_main"
 
 # Pipeline de Batch Inference
 batch_inference_load_data = "src.pipeline_batch_inference.01_load_new_data:main"

@@ -292,6 +292,11 @@ def main(catalog: str, schema: str, drift_threshold: float):
     logger.info("=" * 60)
 
 
-if __name__ == "__main__":
+def cli_main() -> None:
+    """Entry point para execução via linha de comando ou Python wheel."""
     args = parse_args()
     main(args.catalog, args.schema, args.drift_threshold)
+
+
+if __name__ == "__main__":
+    cli_main()

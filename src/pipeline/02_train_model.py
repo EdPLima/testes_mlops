@@ -277,6 +277,11 @@ def main(catalog: str, schema: str, max_iter: int, solver: str, run_name: str):
             logger.info("Execute este script novamente para criar um challenger")
 
 
-if __name__ == "__main__":
+def cli_main() -> None:
+    """Entry point para execução via linha de comando ou Python wheel."""
     args = parse_args()
     main(args.catalog, args.schema, args.max_iter, args.solver, args.run_name)
+
+
+if __name__ == "__main__":
+    cli_main()

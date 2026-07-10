@@ -203,6 +203,11 @@ def main(catalog: str, schema: str):
     logger.info("=" * 60)
 
 
-if __name__ == "__main__":
+def cli_main() -> None:
+    """Entry point para execução via linha de comando ou Python wheel."""
     args = parse_args()
     main(args.catalog, args.schema)
+
+
+if __name__ == "__main__":
+    cli_main()
