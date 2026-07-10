@@ -37,11 +37,11 @@ promote_model = "src.pipeline.04_promote_model:cli_main"
 monitor_drift = "src.pipeline.05_monitor_drift:cli_main"
 
 # Pipeline de Batch Inference
-batch_inference_load_data = "src.pipeline_batch_inference.01_load_new_data:main"
-batch_inference_preprocess = "src.pipeline_batch_inference.02_preprocess:main"
-batch_inference_predict = "src.pipeline_batch_inference.03_run_inference:main"
-batch_inference_save = "src.pipeline_batch_inference.04_save_predictions:main"
-batch_inference_metadata = "src.pipeline_batch_inference.05_save_metadata:main"
+batch_inference_load_data = "src.pipeline_batch_inference.01_load_new_data:cli_main"
+batch_inference_preprocess = "src.pipeline_batch_inference.02_preprocess:cli_main"
+batch_inference_predict = "src.pipeline_batch_inference.03_run_inference:cli_main"
+batch_inference_save = "src.pipeline_batch_inference.04_save_predictions:cli_main"
+batch_inference_metadata = "src.pipeline_batch_inference.05_save_metadata:cli_main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src"]

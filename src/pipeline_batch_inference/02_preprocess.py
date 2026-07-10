@@ -52,9 +52,13 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
-    """Executa pré-processamento usando funções do data_utils."""
-    args = parse_args()
+def main(catalog: str, schema: str):
+    """Executa pré-processamento usando funções do data_utils.
+    
+    Args:
+        catalog: UC Catalog
+        schema: UC Schema
+    """
     
     logger.info("=" * 60)
     logger.info("ETAPA 2: PRE-PROCESSAR DADOS")
@@ -64,7 +68,7 @@ def main():
     spark = get_spark_session()
     
     # Carregar dados da etapa anterior (tabela staging)
-    staging_table = f"{args.catalog}.{args.schema}.batch_inference_staging"
+    staging_table = f"{catalog}.{schema}.batch_inference_staging"
     logger.info(f"Carregando dados de: {staging_table}")
     
     spark_df = spark.table(staging_table)
@@ -91,11 +95,11 @@ def main():
     # Pré-processar (normalizar) as features usando data_utils
     # NOTA: Esta função usa sklearn que requer pandas
     logger.info("Aplicando pre-processamento (StandardScaler)...")
-    df_processed = preprocess_inference_data(spark, df_features, args.catalog, args.schema)
+    df_processed = preprocess_inference_data(spark, df_features, catalog, schema)
     logger.info(f"Pre-processamento concluido: {len(df_processed)} registros validos")
     
     # Salvar features NORMALIZADAS em tabela Delta
-    normalized_table = f"{args.catalog}.{args.schema}.batch_inference_features_normalized"
+    normalized_table = f"{catalog}.{schema}.batch_inference_features_normalized"
     logger.info(f"Salvando features normalizadas em: {normalized_table}")
     
     spark_df_processed = spark.createDataFrame(df_processed)
@@ -103,7 +107,7 @@ def main():
     logger.info(f"Features normalizadas salvas: {count} registros")
     
     # Salvar dados ORIGINAIS (incluindo target se existir) em tabela Delta
-    original_table = f"{args.catalog}.{args.schema}.batch_inference_features_original"
+    original_table = f"{catalog}.{schema}.batch_inference_features_original"
     logger.info(f"Salvando dados originais em: {original_table}")
     
     spark_df_original = spark.createDataFrame(df_all)
@@ -111,5 +115,11 @@ def main():
     logger.info(f"Dados originais salvos: {count} registros")
 
 
+def cli_main() -> None:
+    """Entry point para execução via linha de comando ou Python wheel."""
+    args = parse_args()
+    main(catalog=args.catalog, schema=args.schema)
+
+
 if __name__ == "__main__":
-    main()
+    cli_main()
