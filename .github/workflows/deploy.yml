@@ -58,7 +58,7 @@ jobs:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
       
       - name: Run Training Pipeline (with retry)
-        uses: nick-fields/retry-action@v2
+        uses: nick-invision/retry@v3
         with:
           timeout_minutes: 20
           max_attempts: 3
@@ -90,7 +90,7 @@ jobs:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
       
       - name: Run Training Pipeline (with retry)
-        uses: nick-fields/retry-action@v2
+        uses: nick-invision/retry@v3
         with:
           timeout_minutes: 20
           max_attempts: 3
