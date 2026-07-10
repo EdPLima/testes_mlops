@@ -60,9 +60,10 @@ resources:
       #
       environments:
         - environment_key: "default"
-          spec:
-            python_version: "3.10"
-            dependencies:
+          python:
+            version: "3.10"
+          pip:
+            requirements:
               - "../dist/*.whl"
               - "pandas>=2.0.0"
               - "scikit-learn>=1.3.0"
