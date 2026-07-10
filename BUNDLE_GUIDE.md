@@ -471,8 +471,267 @@ databricks bundle run <job-name> --target dev
 4. **Customize:** Adicione seus próprios jobs
 5. **Documente:** Atualize este guia com suas descobertas
 
+## 🎓 Conceitos Avançados
+
+### Serverless vs Classic Clusters
+
+**Serverless (Recomendado):**
+```yaml
+tasks:
+  - task_key: "process"
+    environment_key: "default"  # Usa serverless
+    python_wheel_task:
+      package_name: "teste_mlops"
+      entry_point: "process_data"
+```
+
+**Classic Cluster (Legacy):**
+```yaml
+tasks:
+  - task_key: "process"
+    job_cluster_key: "default"  # Usa cluster clássico
+    python_wheel_task:
+      package_name: "teste_mlops"
+      entry_point: "process_data"
+
+job_clusters:
+  - job_cluster_key: "default"
+    new_cluster:
+      spark_version: "13.3.x-scala2.12"
+      node_type_id: "i3.xlarge"
+```
+
+**Diferenças:**
+| Aspecto | Serverless | Classic |
+|---------|------------|--------|
+| Startup | ~30s | ~5min |
+| Cost | Pay-per-second | Pay-per-hour |
+| Maintenance | Zero | Manual upgrades |
+| Scaling | Automatic | Manual config |
+
+### Wheel Path: Relativo vs Absoluto
+
+**⚠️ Erro Comum:**
+```yaml
+# ERRADO - path relativo ao bundle root
+dependencies:
+  - "dist/*.whl"  # ❌ Não encontra!
+```
+
+**✅ Correto:**
+```yaml
+# Path relativo ao YAML file (em resources/)
+dependencies:
+  - "../dist/*.whl"  # ✅ Funciona!
+```
+
+**Por quê?**
+- `training_job.yml` está em `resources/`
+- Wheel está em `dist/`
+- De `resources/` para `dist/` = `../dist/`
+
+### Entry Points no pyproject.toml
+
+**Estrutura do Entry Point:**
+```toml
+[project.scripts]
+nome_comando = "modulo.submodulo:função"
+```
+
+**Exemplo Real:**
+```toml
+[project.scripts]
+process_data = "teste_mlops.pipelines.training:process_data_main"
+train_model = "teste_mlops.pipelines.training:train_model_main"
+```
+
+**Como funciona:**
+1. Databricks instala o wheel
+2. Entry point `process_data` vira um comando executável
+3. Job chama `process_data` como se fosse CLI
+4. Python executa `teste_mlops.pipelines.training:process_data_main()`
+
+### Variáveis: Interpolação e Precedência
+
+**Ordem de precedência (maior para menor):**
+1. Target-specific variables
+2. Bundle-level variables
+3. Default values
+
+**Exemplo:**
+```yaml
+variables:
+  catalog_name:
+    default: "dev"  # 3. Default
+
+targets:
+  staging:
+    variables:
+      catalog_name: "staging"  # 1. Target-specific (vence!)
+```
+
+**Interpolação:**
+```yaml
+# Simples
+"${var.catalog_name}"
+
+# Composição
+"${var.catalog_name}.${var.schema_name}"
+
+# Built-ins Databricks
+"${workspace.current_user.userName}"
+"${bundle.target}"
+"${bundle.name}"
+```
+
+## 🧪 Exemplos Práticos
+
+### Exemplo 1: Job com Múltiplas Tasks em Paralelo
+
+```yaml
+tasks:
+  # Task 1 e 2 rodam em paralelo
+  - task_key: "load_features"
+    python_wheel_task:
+      entry_point: "load_features"
+  
+  - task_key: "load_labels"
+    python_wheel_task:
+      entry_point: "load_labels"
+  
+  # Task 3 só roda após ambas terminarem
+  - task_key: "merge_data"
+    depends_on:
+      - task_key: "load_features"
+      - task_key: "load_labels"
+    python_wheel_task:
+      entry_point: "merge_data"
+```
+
+### Exemplo 2: Notificações Condicionais
+
+```yaml
+email_notifications:
+  on_success:
+    - "${var.email_success}"  # Apenas em prod
+  on_failure:
+    - "${var.email_failure}"  # Sempre alerta
+  on_duration_warning_threshold_exceeded:
+    - "sre-team@company.com"  # Se demorar muito
+
+timeout_seconds: 3600
+```
+
+No `databricks.yml`:
+```yaml
+targets:
+  dev:
+    variables:
+      email_success: ""  # Não envia em dev
+      email_failure: "dev@company.com"
+  
+  prod:
+    variables:
+      email_success: "team@company.com"  # Envia em prod
+      email_failure: "sre@company.com"
+```
+
+### Exemplo 3: Retry com Backoff
+
+```yaml
+tasks:
+  - task_key: "api_call"
+    retry_on_timeout: true
+    max_retries: 3
+    min_retry_interval_millis: 10000   # 10s
+    python_wheel_task:
+      entry_point: "call_external_api"
+```
+
+**Comportamento:**
+- Tentativa 1 falha → espera 10s → retry
+- Tentativa 2 falha → espera 10s → retry
+- Tentativa 3 falha → job FAILED
+
+### Exemplo 4: Parameters Dinâmicos
+
+```yaml
+parameters:
+  - name: "start_date"
+    default: "2024-01-01"
+  - name: "end_date"
+    default: "2024-12-31"
+  - name: "model_type"
+    default: "logistic_regression"
+
+tasks:
+  - task_key: "train"
+    python_wheel_task:
+      entry_point: "train_model"
+      parameters:
+        - "--start-date"
+        - "{{job.parameters.start_date}}"  # Runtime override
+        - "--end-date"
+        - "{{job.parameters.end_date}}"
+        - "--model"
+        - "{{job.parameters.model_type}}"
+```
+
+**Override via CLI:**
+```bash
+databricks jobs run-now \
+  --job-id 123 \
+  --python-params '{"start_date": "2024-06-01", "model_type": "random_forest"}'
+```
+
+## 📚 Checklist de Deploy
+
+### Antes de Deploy em Staging
+- [ ] Testes unitários passando localmente
+- [ ] `databricks bundle validate` sem erros
+- [ ] Deploy em dev testado e funcionando
+- [ ] Código revisado (pull request)
+- [ ] Variáveis de staging configuradas
+- [ ] Catálogo/schema de staging existem
+
+### Antes de Deploy em Prod
+- [ ] Deploy em staging testado por 24h+
+- [ ] Métricas de staging validadas
+- [ ] Rollback plan definido
+- [ ] Stakeholders notificados
+- [ ] Janela de manutenção agendada (se necessário)
+- [ ] Monitoring/alertas configurados
+- [ ] Documentação atualizada
+
+## 🔍 Debug de Bundles
+
+### Ver Bundle Expandido
+```bash
+# Mostra YAML final após interpolação
+databricks bundle deployment --target dev
+```
+
+### Ver Recursos Criados
+```bash
+# Lista todos os recursos do bundle
+databricks bundle summary --target dev
+```
+
+### Logs Detalhados
+```bash
+# Deploy com debug
+databricks bundle deploy --target dev --debug
+```
+
+### Validar sem Deploy
+```bash
+# Dry-run (mostra o que faria)
+databricks bundle deploy --target dev --dry-run
+```
+
 ## Recursos Adicionais
 
 - [Documentação oficial Databricks Bundles](https://docs.databricks.com/dev-tools/bundles/index.html)
 - [Exemplos de Bundles](https://github.com/databricks/bundle-examples)
 - [Quartz Cron Expression](https://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/crontrigger.html)
+- [Databricks CLI Reference](https://docs.databricks.com/dev-tools/cli/index.html)

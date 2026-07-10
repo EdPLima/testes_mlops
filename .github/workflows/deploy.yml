@@ -1,5 +1,17 @@
 name: CD - Deploy to Databricks
-# add teste dos testes
+# ==============================================================================
+# CI/CD Pipeline for Databricks MLOps Project
+#
+# IMPORTANT: Free Edition Serverless Jobs
+# - Serverless compute capacity is shared and not guaranteed
+# - Jobs may fail with "Cannot launch the cluster" during peak hours
+# - Solution: Retry strategy (3 attempts with 5min wait)
+# - Best results: Run during off-peak hours (late night/early morning US East)
+#
+# Triggers:
+# - Push to main → Deploy to staging + run training
+# - Tag v* → Deploy to production + run training
+# ==============================================================================
 on:
   push:
     branches: [main]
@@ -40,14 +52,19 @@ jobs:
       
       - name: Deploy to Staging
         run: |
-          databricks bundle deploy --target staging
+          databricks bundle deploy --target staging --force
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
       
-      - name: Run Training Pipeline
-        run: |
-          databricks bundle run mlops_training_pipeline --target staging
+      - name: Run Training Pipeline (with retry)
+        uses: nick-fields/retry-action@v2
+        with:
+          timeout_minutes: 20
+          max_attempts: 3
+          retry_wait_seconds: 300
+          command: |
+            databricks bundle run mlops_training_pipeline --target staging
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
@@ -72,9 +89,14 @@ jobs:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
       
-      - name: Run Training Pipeline
-        run: |
-          databricks bundle run mlops_training_pipeline --target prod
+      - name: Run Training Pipeline (with retry)
+        uses: nick-fields/retry-action@v2
+        with:
+          timeout_minutes: 20
+          max_attempts: 3
+          retry_wait_seconds: 300
+          command: |
+            databricks bundle run mlops_training_pipeline --target prod
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}

@@ -61,7 +61,6 @@ resources:
       environments:
         - environment_key: "default"
           spec:
-            client: "1"
             dependencies:
               - "../dist/*.whl"
               - "pandas>=2.0.0"
